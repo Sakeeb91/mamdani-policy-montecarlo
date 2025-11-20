@@ -2,6 +2,14 @@
 
 A comprehensive Monte Carlo simulation analyzing the fiscal implications of NYC mayoral candidate Zohran Mamdani's policy proposals.
 
+## 🌐 Live Demo
+
+**Try the interactive simulation now:**
+
+👉 **[Launch Interactive App](https://mamdani-policy-montecarlo.streamlit.app/)** 👈
+
+Explore different policy scenarios, adjust costs and revenues in real-time, and see immediate fiscal projections!
+
 ## Overview
 
 This project uses advanced statistical modeling to assess whether Zohran Mamdani's progressive policy agenda is financially viable. By running thousands of simulations with varying cost and revenue parameters, we can quantify the probability of different fiscal outcomes and identify potential budget risks.
@@ -93,11 +101,19 @@ python main.py --simulations 10000 --threshold 2.0 --seed 42
 
 ## Interactive Web Application 🌐
 
-**Try the live interactive dashboard!**
+### 🚀 Live Application
+
+**Access the live app here:** [https://mamdani-policy-montecarlo.streamlit.app/](https://mamdani-policy-montecarlo.streamlit.app/)
+
+### 💻 Run Locally
+
+To run on your own machine:
 
 ```bash
 streamlit run app.py
 ```
+
+### Features
 
 The Streamlit web application provides:
 - 🎛️ **Interactive Parameter Adjustment**: Modify policy costs and revenues in real-time
