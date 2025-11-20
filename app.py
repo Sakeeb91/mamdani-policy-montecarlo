@@ -542,6 +542,221 @@ def display_results(results, threshold):
         policy_df = pd.DataFrame(policy_stats)
         st.dataframe(policy_df, hide_index=True, use_container_width=True)
 
+    # Deficit elimination strategies
+    deficit = np.mean(results['net_budget_impact'])
+    if deficit > 0.1:  # Only show if there's a meaningful deficit
+        st.markdown("---")
+        st.markdown("### 💡 Proposed Changes to Eliminate Deficit")
+
+        st.markdown(f"""
+        <div class="warning-box">
+        <strong>Current Situation:</strong> Average deficit of <strong>${deficit:.2f}B annually</strong>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### Options to Balance the Budget:")
+
+        # Create tabs for different strategies
+        strategy_tab1, strategy_tab2, strategy_tab3, strategy_tab4 = st.tabs([
+            "💰 Increase Revenue Only",
+            "✂️ Reduce Costs Only",
+            "⚖️ Balanced Approach",
+            "📋 Policy Prioritization"
+        ])
+
+        mean_revenue = np.mean(results['revenues'])
+        mean_total_cost = np.mean(results['total_costs'])
+
+        with strategy_tab1:
+            st.markdown("**Revenue Increase Strategy**")
+            new_revenue = mean_total_cost
+            additional_revenue = new_revenue - mean_revenue
+            pct_increase = 100 * additional_revenue / mean_revenue
+
+            st.info(f"""
+            **Required Action:** Increase tax revenue from ${mean_revenue:.2f}B to ${new_revenue:.2f}B
+
+            - **Additional Revenue Needed:** ${additional_revenue:.2f}B
+            - **Percentage Increase:** {pct_increase:.1f}%
+
+            **Possible Implementation:**
+            - Increase wealth tax from 2% to ~{2 * (1 + pct_increase/100):.1f}% on income >$1M
+            - Raise corporate tax rate from 11.5% to ~{11.5 * (1 + pct_increase/100):.1f}%
+            - Implement new progressive income tax brackets
+            - Add commercial real estate taxes
+
+            **Considerations:**
+            - Risk of wealthy residents leaving NYC
+            - Requires NY State approval for income tax changes
+            - May face legal challenges
+            - Could impact business climate
+            """)
+
+        with strategy_tab2:
+            st.markdown("**Cost Reduction Strategy**")
+            new_total_cost = mean_revenue
+            cost_reduction = mean_total_cost - new_total_cost
+            pct_reduction = 100 * cost_reduction / mean_total_cost
+
+            st.info(f"""
+            **Required Action:** Reduce total policy costs from ${mean_total_cost:.2f}B to ${new_total_cost:.2f}B
+
+            - **Cost Reduction Needed:** ${cost_reduction:.2f}B
+            - **Percentage Reduction:** {pct_reduction:.1f}%
+
+            **Possible Implementation:**
+            """)
+
+            # Show reduction options for each policy
+            reduction_options = []
+            for col in results['policy_costs'].columns:
+                policy_name = col.replace('_', ' ').title()
+                mean_cost = np.mean(results['policy_costs'][col])
+                proportional_reduction = mean_cost * (pct_reduction / 100)
+                new_cost = mean_cost - proportional_reduction
+
+                reduction_options.append({
+                    'Policy': policy_name,
+                    'Current Cost': f"${mean_cost:.2f}B",
+                    f'Reduce by {pct_reduction:.1f}%': f"${proportional_reduction:.2f}B",
+                    'New Cost': f"${new_cost:.2f}B"
+                })
+
+            reduction_df = pd.DataFrame(reduction_options)
+            st.dataframe(reduction_df, hide_index=True, use_container_width=True)
+
+            st.markdown("""
+            **Specific Cost-Cutting Measures:**
+            - 🏘️ **Housing:** Use non-union labor (saves ~30%), reduce to 150K units instead of 200K
+            - 👶 **Childcare:** Phase in gradually, start with means-testing, delay wage increases
+            - 🚌 **Buses:** Implement on select routes first, not entire system
+            - 🛒 **Grocery:** Start with 2-3 stores instead of 5
+            """)
+
+        with strategy_tab3:
+            st.markdown("**Balanced Approach (50/50 Split)**")
+            half_deficit = deficit / 2
+
+            # Revenue increase
+            new_revenue_balanced = mean_revenue + half_deficit
+            revenue_increase_pct = 100 * half_deficit / mean_revenue
+
+            # Cost reduction
+            new_cost_balanced = mean_total_cost - half_deficit
+            cost_reduction_pct = 100 * half_deficit / mean_total_cost
+
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                st.success(f"""
+                **Increase Revenue by ${half_deficit:.2f}B** ({revenue_increase_pct:.1f}%)
+
+                From: ${mean_revenue:.2f}B
+                To: ${new_revenue_balanced:.2f}B
+
+                • More modest tax increases
+                • Lower political resistance
+                • Reduced flight risk
+                """)
+
+            with col_b:
+                st.warning(f"""
+                **Reduce Costs by ${half_deficit:.2f}B** ({cost_reduction_pct:.1f}%)
+
+                From: ${mean_total_cost:.2f}B
+                To: ${new_cost_balanced:.2f}B
+
+                • Selective program scaling
+                • Phased implementation
+                • Maintain core benefits
+                """)
+
+            st.info("""
+            **Why This Works Better:**
+            - ✓ Distributes burden more evenly
+            - ✓ Reduces risk of tax base erosion
+            - ✓ Maintains most program benefits
+            - ✓ More politically feasible
+            - ✓ Allows flexibility in implementation
+            """)
+
+        with strategy_tab4:
+            st.markdown("**Policy Prioritization Strategy**")
+
+            st.markdown("""
+            **Recommended Implementation Order** (by fiscal impact and feasibility):
+            """)
+
+            # Calculate what policies could be implemented within revenue
+            policies_sorted = []
+            for col in results['policy_costs'].columns:
+                policy_name = col.replace('_', ' ').title()
+                mean_cost = np.mean(results['policy_costs'][col])
+                pct_of_total = 100 * mean_cost / mean_total_cost
+
+                policies_sorted.append({
+                    'policy': policy_name,
+                    'cost': mean_cost,
+                    'pct': pct_of_total,
+                    'key': col
+                })
+
+            # Sort by cost (lowest first for phasing)
+            policies_sorted.sort(key=lambda x: x['cost'])
+
+            cumulative_cost = 0
+            priority_data = []
+            for i, policy in enumerate(policies_sorted):
+                cumulative_cost += policy['cost']
+                affordable = "✓ Affordable" if cumulative_cost <= mean_revenue else "✗ Over Budget"
+                priority_data.append({
+                    'Priority': f"Phase {i+1}",
+                    'Policy': policy['policy'],
+                    'Cost': f"${policy['cost']:.2f}B",
+                    'Cumulative': f"${cumulative_cost:.2f}B",
+                    'Status': affordable
+                })
+
+            priority_df = pd.DataFrame(priority_data)
+            st.dataframe(priority_df, hide_index=True, use_container_width=True)
+
+            # Calculate how many policies can be afforded
+            affordable_count = sum(1 for p in priority_data if "✓" in p['Status'])
+
+            if affordable_count < len(policies_sorted):
+                st.warning(f"""
+                **With current revenue (${mean_revenue:.2f}B):**
+                - Can fully fund {affordable_count} out of {len(policies_sorted)} policies
+                - Would need additional ${deficit:.2f}B for all policies
+
+                **Recommendation:**
+                Implement phases 1-{affordable_count} immediately, then:
+                - Secure additional revenue for remaining phases
+                - OR redesign remaining policies for lower cost
+                - OR phase in remaining policies over multiple years as revenue grows
+                """)
+            else:
+                st.success(f"""
+                ✓ All policies can be funded with current revenue!
+                """)
+
+    elif deficit < -0.1:  # Surplus situation
+        st.markdown("---")
+        st.markdown("### 💰 Budget Surplus Options")
+
+        surplus = -deficit
+        st.success(f"""
+        **Great news!** The policies generate an average surplus of **${surplus:.2f}B annually**.
+
+        **Options for surplus funds:**
+        - 🏦 Create rainy-day fund for economic downturns
+        - 📈 Expand existing programs beyond initial scope
+        - 🎯 Add new targeted programs (mental health, climate, etc.)
+        - 💼 Reduce other taxes or provide tax credits
+        - 🏗️ Infrastructure investments
+        - 📊 Performance bonuses for efficiency improvements
+        """)
+
 
 def display_visualizations(results, threshold):
     """Display interactive visualizations"""
