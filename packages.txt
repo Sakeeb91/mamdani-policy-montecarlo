@@ -1,8 +1,5 @@
-# System packages required for Streamlit Cloud deployment
-# These will be installed via apt-get
-
-# Required for matplotlib
 libgomp1
-
-# Required for some scientific packages
+gfortran
+libopenblas-dev
+liblapack-dev
 build-essential
